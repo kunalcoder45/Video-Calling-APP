@@ -6,77 +6,92 @@ import cors from "cors";
 const app = express();
 const server = http.createServer(app);
 
-// CORS Configuration
 const io = new Server(server, {
     cors: {
-        origin: "*", // Update this to match your frontend URL in production
+        origin: "*",
         methods: ["GET", "POST"]
     }
 });
 
-// Store active rooms and users
-const rooms = {};
+const rooms = {}; // Store rooms and users
+
+// Generate a unique 6-character room code
+const generateRoomCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
 io.on("connection", (socket) => {
     console.log(`User connected: ${socket.id}`);
 
-    /** Handle User Joining a Room */
-    socket.on("joinRoom", ({ username, roomCode }) => {
-        // If room does not exist, create it
-        if (!rooms[roomCode]) {
-            rooms[roomCode] = [];
-        }
+    // Create a new room and return the room code
+    socket.on("createRoom", (data, callback) => {  
+        const roomCode = generateRoomCode();
+        rooms[roomCode] = [];  // ✅ Room ko store karo
+    
+        console.log(`Room Created: ${roomCode}`);
+        
+        if (callback) callback({ roomCode });
+    });
+    
+    
 
-        // Add user to the room
+    socket.on("joinRoom", ({ username, roomCode }, callback) => {
+        if (!rooms[roomCode]) {
+            return callback?.({ error: "Invalid room code! Room does not exist." });
+        }
+    
+        const userExists = rooms[roomCode].some(user => user.username === username);
+        if (userExists) {
+            return callback?.({ error: "Username already taken in this room!" });
+        }
+    
         rooms[roomCode].push({ id: socket.id, username });
         socket.join(roomCode);
-
-        console.log(`${username} joined room: ${roomCode}`);
-
-        // Notify the user that they joined successfully
+    
+        console.log(`${username} joined room ${roomCode}`);
+    
+        callback?.({ success: true, username, roomCode }); // ✅ Always call callback
+    
+        // Notify the user who joined
         socket.emit("roomJoined", { username, roomCode });
-
-        // Notify others in the room
-        socket.to(roomCode).emit("userJoined", { username, roomCode, id: socket.id });
-
-        // Log active users in the room (for debugging)
-        console.log(`Users in room ${roomCode}:`, rooms[roomCode]);
+    
+        // Notify other users in the room
+        socket.to(roomCode).emit("userJoined", { username, id: socket.id });
     });
+    
 
-    /** Handle Incoming Call */
+    socket.on("sendMessage", ({ roomCode, messageData }) => {
+        console.log(`${messageData.username} sent message in room ${roomCode}: ${messageData.text}`);
+        
+        // ✅ Only broadcast to others, not the sender
+        socket.to(roomCode).emit("receiveMessage", messageData);
+    });
+    
+
+    // Handle WebRTC call offer
     socket.on("user:call", ({ to, offer }) => {
-        // Emit the offer to the target user
-        io.to(to).emit("incomming:call", { from: socket.id, offer });
+        io.to(to).emit("incoming:call", { from: socket.id, offer });
     });
 
-    /** Handle Call Accepted */
+    // Handle WebRTC call answer
     socket.on("call:accepted", ({ to, answer }) => {
-        // Emit the answer to the target user
         io.to(to).emit("call:accepted", { answer });
     });
 
-    /** Handle User Disconnecting */
+    // Handle user disconnect
     socket.on("disconnect", () => {
+        let roomToDelete = null;
         Object.keys(rooms).forEach((roomCode) => {
-            // Remove the user from all rooms
             rooms[roomCode] = rooms[roomCode].filter(user => user.id !== socket.id);
-            if (rooms[roomCode].length === 0) {
-                // If the room is empty, delete it
-                delete rooms[roomCode];
-            }
+            if (rooms[roomCode].length === 0) roomToDelete = roomCode;
         });
+
+        if (roomToDelete) delete rooms[roomToDelete];
 
         console.log(`User disconnected: ${socket.id}`);
     });
 });
 
-// Basic API Endpoint
 app.get("/", (req, res) => {
-    res.send("Peer-to-Peer Meeting Backend Running...");
+    res.send("Video Call Server Running");
 });
 
-// Start Server
-const PORT = 3000;
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+server.listen(3000, () => console.log("Server running on port 3000"));
