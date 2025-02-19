@@ -55,14 +55,6 @@ Now, open `http://localhost:5173` in your browser. 🎉
 
 ---
 
-## 📸 Screenshots
-
-| Create Room | Video Call | Chat |
-|-------------|-----------|------|
-| ![Create Room](screenshots/create-room.png) | ![Video Call](screenshots/video-call.png) | ![Chat](screenshots/chat.png) |
-
----
-
 ## 🏗️ Folder Structure
 ```bash
 video-calling-app/
