@@ -18,7 +18,7 @@ A real-time **video calling and chat application** built with **React, Node.js, 
 - **Frontend:** React, Tailwind CSS, React Router
 - **Backend:** Node.js, Express, Socket.io
 - **WebRTC** for video calling
-
+- **Peer-to-Peer** technology
 ---
 
 ## 📌 Installation & Setup
