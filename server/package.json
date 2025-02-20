@@ -14,8 +14,10 @@
     "buffer": "^6.0.3",
     "cors": "^2.8.5",
     "crypto-browserify": "^3.12.1",
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "global": "^4.4.0",
+    "mongoose": "^8.10.1",
     "simple-peer": "^9.11.1",
     "socket.io": "^4.8.1"
   }

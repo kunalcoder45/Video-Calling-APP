@@ -1,11 +1,25 @@
 import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
-import cors from "cors";
+import connectDB from "./config/db.js";
+import notesRoutes from "./routes/routes.js";
 
+dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
+app.use(cors());
+app.use(express.json());
+
+// Connect Database
+connectDB();
+
+// Notes API Routes
+app.use("/notes", notesRoutes);
+
+// WebSocket Server for Video Call
 const io = new Server(server, {
     cors: {
         origin: "*",
@@ -13,7 +27,7 @@ const io = new Server(server, {
     }
 });
 
-const rooms = {}; // Store rooms and users
+const rooms = {};
 
 // Generate a unique 6-character room code
 const generateRoomCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -21,62 +35,51 @@ const generateRoomCode = () => Math.random().toString(36).substring(2, 8).toUppe
 io.on("connection", (socket) => {
     console.log(`User connected: ${socket.id}`);
 
-    // Create a new room and return the room code
     socket.on("createRoom", (data, callback) => {  
         const roomCode = generateRoomCode();
-        rooms[roomCode] = [];  // ✅ Room ko store karo
-    
-        console.log(`Room Created: ${roomCode}`);
-        
-        if (callback) callback({ roomCode });
+        rooms[roomCode] = [{ id: socket.id, username: data.username }]; // Add creator to room
+        socket.join(roomCode);
+        console.log(`Room Created: ${roomCode} by ${data.username}`);
+        callback?.({ roomCode });
     });
-    
     
 
     socket.on("joinRoom", ({ username, roomCode }, callback) => {
+        console.log(`User ${username} trying to join room ${roomCode}`);
+        console.log("Existing rooms:", rooms); // Debugging log
+    
         if (!rooms[roomCode]) {
+            console.log(`Room ${roomCode} not found!`);
             return callback?.({ error: "Invalid room code! Room does not exist." });
         }
     
         const userExists = rooms[roomCode].some(user => user.username === username);
-        if (userExists) {
-            return callback?.({ error: "Username already taken in this room!" });
-        }
+        if (userExists) return callback?.({ error: "Username already taken in this room!" });
     
         rooms[roomCode].push({ id: socket.id, username });
         socket.join(roomCode);
     
         console.log(`${username} joined room ${roomCode}`);
+        callback?.({ success: true, username, roomCode });
     
-        callback?.({ success: true, username, roomCode }); // ✅ Always call callback
-    
-        // Notify the user who joined
         socket.emit("roomJoined", { username, roomCode });
-    
-        // Notify other users in the room
         socket.to(roomCode).emit("userJoined", { username, id: socket.id });
     });
     
 
     socket.on("sendMessage", ({ roomCode, messageData }) => {
         console.log(`${messageData.username} sent message in room ${roomCode}: ${messageData.text}`);
-        
-        // ✅ Only broadcast to others, not the sender
         socket.to(roomCode).emit("receiveMessage", messageData);
     });
-    
 
-    // Handle WebRTC call offer
     socket.on("user:call", ({ to, offer }) => {
         io.to(to).emit("incoming:call", { from: socket.id, offer });
     });
 
-    // Handle WebRTC call answer
     socket.on("call:accepted", ({ to, answer }) => {
         io.to(to).emit("call:accepted", { answer });
     });
 
-    // Handle user disconnect
     socket.on("disconnect", () => {
         let roomToDelete = null;
         Object.keys(rooms).forEach((roomCode) => {
@@ -91,7 +94,8 @@ io.on("connection", (socket) => {
 });
 
 app.get("/", (req, res) => {
-    res.send("Video Call Server Running");
+    res.send("Server Running: Notes API + Video Call WebSocket");
 });
 
-server.listen(3000, () => console.log("Server running on port 3000"));
+// Start the server on port 3000
+server.listen(3000, () => console.log("🚀 Server running on port 3000"));
