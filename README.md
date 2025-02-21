@@ -82,25 +82,6 @@ video-calling-app/
 
 ---
 
-## 🌍 Deployment
-You can deploy this app on:
-- **Frontend:** Vercel, Netlify
-- **Backend:** Render, Railway, Heroku
-
-### Deploy on Vercel (Frontend)
-```sh
-cd client
-vercel deploy
-```
-
-### Deploy on Render (Backend)
-```sh
-cd server
-git push origin main
-```
-
----
-
 ## ✨ Contributing
 Contributions are welcome! Feel free to fork this repo and submit a pull request. 😊
 
