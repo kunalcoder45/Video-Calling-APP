@@ -25,7 +25,7 @@ A real-time **video calling and chat application** built with **React, Node.js, 
 
 ### 🔹 1. Clone the Repository
 ```sh
-git clone https://github.com/your-username/video-calling-app.git
+https://github.com/kunalcoder45/Video-Calling-APP.git
 cd video-calling-app
 ```
 
