@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 
-const BASE_URL = import.meta.env.VITE_BASE_URL || "https://video-server-j52o.onrender.com/";
+const BASE_URL = import.meta.env.VITE_BASE_URL;
 const socket = io(`${BASE_URL}`);
 
 class PeerService {
